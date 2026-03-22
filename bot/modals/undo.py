@@ -4,6 +4,13 @@ from discord import Interaction, TextStyle, Role
 from discord.utils import get
 from discord.ui import TextInput, Modal
 import copy
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s: %(message)s",
+    handlers=[logging.FileHandler("log.log", mode="a"), logging.StreamHandler()],
+)  # , datefmt="%Y-%m-%d %H:%M:%S")
 
 
 class UndoModal(Modal):
@@ -29,7 +36,7 @@ class UndoModal(Modal):
     def initialize(self):
         self.confirm = TextInput(
             label=f"{self.ui['Confirm']['Label']}",
-            default="1",
+            default="",
             placeholder=f"{self.ui['Confirm']['Placeholder']}",
             style=TextStyle.short,
             required=True,
@@ -80,9 +87,9 @@ class UndoModal(Modal):
 
             self.bot.rosters[self.channel.id] = copy.deepcopy(self.roster)
             self.bot.librarian.put_roster(
-                channel=self.channel_id, data=self.bot.rosters[self.channel.id]
+                channel_id=self.channel_id, data=self.bot.rosters[self.channel.id]
             )
-            self.bot.libarian.delete_undo_data(self.channel_name)
+            self.bot.librarian.delete_undo_data(self.channel_name)
 
             guild = interaction.guild
             embed = None
@@ -108,7 +115,7 @@ class UndoModal(Modal):
 
                 embed = EmbedFactory.create_status(
                     roster=self.roster,
-                    language=self.user_language,
+                    language=self.bot.language[self.user_language]["ui"]["Status"],
                     bot=self.bot,
                     roles_req=roles_req,
                     guild=guild,
@@ -124,16 +131,18 @@ class UndoModal(Modal):
 
             await self.channel.send(embed=embed)
 
+            await interaction.response.send_message(
+                f"{self.language['Completed'] % self.channel.name}"
+            )
+
         except Exception as e:
             await interaction.response.send_message(
                 f"{Utilities.format_error(self.user_language, self.language['CantCreate'])}"
             )
             logging.error(f"Undo Creation Channel And Embed Error: {str(e)}")
-            return
 
     async def on_error(self, interaction: Interaction, error: Exception) -> None:
         await interaction.response.send_message(
             f"{Utilities.format_error(self.user_language, self.bot.language['Unknown'])}"
         )
         logging.error(f"Undo Error: {str(error)}")
-        return

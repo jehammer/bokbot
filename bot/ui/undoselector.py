@@ -29,7 +29,7 @@ class UndoSelect(ui.Select):
                         new_label = f"{label}{count}".strip()
                         if new_label not in used:
                             label = new_label
-                            self.channel_mapper[label] = i
+                            self.mapper[label] = i
                             break
                         count += 1
                 options.append(SelectOption(label=label))

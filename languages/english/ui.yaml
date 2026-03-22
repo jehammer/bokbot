@@ -137,7 +137,7 @@ Birthday:
     Placeholder: "Second digit"
 
 Undo:
-  Title: "Undo Close"
+  Title: "Undo Close %s"
   Confirm:
     Label: "Confirm Undo"
     Placeholder: "Y or N? Click cancel to close this"

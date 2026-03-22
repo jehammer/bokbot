@@ -39,7 +39,7 @@ Roster:
   NoDefault: >
     0002: You have no default set, please specify a role (ex: `!%s dps`) or set a default 
     (ex: `!default dps`) then try again.
-  NoRankError: > 
+  NoRankError: >
     0003: You do not have the right rank to sign up as %s for this roster.
     Head on over to <#%s> to explore ranks and what you need to do to
     achieve them. You are looking for details on Tier %s
@@ -55,7 +55,6 @@ EventRoster:
   Added: "Added!"
   Removed: "Removed :("
   NoBackup: "0042: You can't backup to an event!"
-
 
 Default:
   Set: "default role has been set to %s"
@@ -171,3 +170,4 @@ Birthday:
 
 Undo:
   BadConfirmError: "0022: You must enter a `y` or an `n` in the Confirmation fields."
+  Completed: "Roster %s restored"
