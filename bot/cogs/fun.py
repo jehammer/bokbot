@@ -205,7 +205,7 @@ class Fun(commands.Cog, name="Fun"):
             embed = EmbedFactory.create_ranking(
                 rank=rank_data,
                 lang=self.bot.language[user_language]["ui"]["Rank"],
-                name=interaction.user.display_name,
+                name=member.display_name,
             )
             await interaction.response.send_message(embed=embed)
 
