@@ -370,6 +370,23 @@ Goodnight BOK
             )
             logging.error(f"Birthday Error: {str(e)}")
 
+    @commands.command(name="quickie")
+    async def just_a_quick_run(self, ctx: commands.Context):
+        """For Octavia"""
+        user_language = (
+            Utilities.get_language(ctx.author)
+            if isinstance(ctx.author, Member)
+            else "english"
+        )
+        try:
+            await ctx.send(
+                "https://cdn.discordapp.com/attachments/911730032286785536/1492409390052151436/quickie.png"
+            )
+        except Exception as e:
+            await ctx.send(
+                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
+            )
+            logging.error(f"Quickie error: {str(e)}")
 
-async def setup(bot: commands.Bot):
+
     await bot.add_cog(Fun(bot))

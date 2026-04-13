@@ -1,4 +1,4 @@
-from discord import member
+from discord import Member
 import logging
 
 languages = ["English", "Spanish", "French"]
@@ -14,7 +14,7 @@ class Utilities:
     """Class to store one-off functions that don't otherwise have a home"""
 
     @staticmethod
-    def get_language(m: member):
+    def get_language(m: Member):
         """Static Method to return a language based on a users Discord Roles"""
         for lang in languages:
             for role in m.roles:
