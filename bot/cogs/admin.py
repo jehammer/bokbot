@@ -377,30 +377,35 @@ class Admin(commands.Cog, name="Admin"):
             user_id = f"{member.id}"
             to_send += f"{member.name} - {member.display_name} has left the server\n"
             for i in self.bot.rosters:
-                if isinstance(i, Roster):
-                    _, role, is_on = i.remove_member(user_id, True)
+                if isinstance(self.bot.rosters[i], Roster):
+                    _, role, is_on = self.bot.rosters[i].remove_member(user_id, True)
                     if is_on:
                         was_on = True
+                        channel_name = getattr(
+                            self.bot.get_channel(int(i)), "name", "Unknown Channel"
+                        )
                         logging.info(
                             f"Updating Roster {channel_name} for member removal"
                         )
-                        self.bot.librarian.update_roster(i, self.bot.rosters[i])
+                        self.bot.librarian.put_roster(i, self.bot.rosters[i])
                         to_send += f"Traitor was removed as a {role.capitalize()} from {channel_name}\n"
-                elif isinstance(i, EventRoster):
+                elif isinstance(self.bot.rosters[i], EventRoster):
                     if user_id in self.bot.rosters[i].members.keys():
-                        channel_name = self.bot.get_channel(int(i)).name
+                        channel_name = getattr(
+                            self.bot.get_channel(int(i)), "name", "Unknown Channel"
+                        )
                         self.bot.rosters[i].remove_member(user_id)
                         to_send += f"Traitor was removed from {channel_name}\n"
                         was_on = True
                         logging.info(
                             f"Updating Roster {channel_name} for member removal"
                         )
-                        self.bot.librarian.update_roster(i, self.bot.rosters[i])
+                        self.bot.librarian.put_roster(i, self.bot.rosters[i])
 
             if was_on:
-                to_send += f"The Traitor has been removed from all active rosters.\n"
+                to_send += "The Traitor has been removed from all active rosters.\n"
             else:
-                to_send += f"The Traitor was not on any active rosters.\n"
+                to_send += "The Traitor was not on any active rosters.\n"
             # Delete Default
             self.bot.librarian.delete_default(member.id)
             to_send += "Deleted Default\n"
