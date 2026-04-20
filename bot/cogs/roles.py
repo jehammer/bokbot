@@ -58,8 +58,8 @@ class Roles(commands.Cog, name="Roles"):
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_load_on_ready(self, bot):
-        set_roles_info(bot)
+    async def on_ready(self):
+        set_roles_info(self.bot)
         logging.info(f"Roles Cog Roles Set")
 
     @commands.command(name="agree")
