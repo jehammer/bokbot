@@ -171,3 +171,5 @@ Birthday:
 Undo:
   BadConfirmError: "0022: You must enter a `y` or an `n` in the Confirmation fields."
   Completed: "Roster %s restored"
+
+MissingGuild: "0045: Guild is missing in interaction. Blame Arma or Lily"
