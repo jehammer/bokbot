@@ -1,34 +1,74 @@
+import random
+
+from discord import Game, app_commands, Interaction
 from discord.ext import commands
 import logging
 import time
 
 # My created imports
 from bot import decor as permissions
+from bot.errors.boterrors import (
+    NoDefaultError,
+    NoRoleError,
+    NotPrivateError,
+    UnknownError,
+)
+from bot.models import BOKBot
 from bot.services import RosterExtended
 
 
-class EventsSys(commands.Cog, name="EventsSys"):
-    """Automated/Lower Level Management Stuff for the Events system(s)"""
+class BotSystems(commands.Cog, name="BotSystems"):
+    """Listeners for BOKBot events and dispatches and creator-only commands for maintenance"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: BOKBot):
         self.bot = bot
 
+    async def on_tree_error(self, interaction: Interaction, error):
+        if isinstance(error, app_commands.MissingPermissions):
+            await interaction.response.send_message(
+                "You're missing permissions to use that"
+            )
+        elif isinstance(error, app_commands.MissingRole):
+            await interaction.response.send_message(f"{str(error)}")
+        elif isinstance(error, NotPrivateError):
+            await interaction.response.send_message(f"{str(error)}", ephemeral=True)
+        else:
+            await interaction.response.send_message(
+                "Some weird error is being thrown. Not sure what it is"
+            )
+            logging.error(f"{str(error)}")
+
     @commands.Cog.listener()
-    async def on_load_on_ready(self, bot):
+    async def on_ready(self):
+
+        if self.bot.user is None:
+            return
+
+        logging.info(f"Logged in as: {self.bot.user.name}")
+
+        # Set Presence
+        await self.bot.change_presence(
+            activity=Game(name=self.bot.config["presence_message"])
+        )
+
         fetched = self.bot.librarian.get_all_rosters()
         if fetched is not None:
             self.bot.rosters = fetched
-            logging.info(f"Found and Loaded Rosters")
+            logging.info("Found and Loaded Rosters")
         else:
-            logging.info(f"No Rosters Found")
+            logging.info("No Rosters Found")
         fetched = RosterExtended.get_limits(
             librarian=self.bot.librarian, roles_config=self.bot.config["raids"]["ranks"]
         )
         if fetched is not None:
             self.bot.limits = fetched
-            logging.info(f"Found and Loaded Limits")
+            logging.info("Found and Loaded Limits")
         else:
-            logging.info(f"No Limits Found")
+            logging.info("No Limits Found")
+
+        self.bot.tree.on_error = self.on_tree_error
+
+        logging.info("Bot is ready for use")
 
     @commands.Cog.listener()
     async def on_sort_rosters(self):
@@ -42,6 +82,37 @@ class EventsSys(commands.Cog, name="EventsSys"):
         except Exception as e:
             logging.error(f"Position Change Error: {str(e)}")
             return
+
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.CommandNotFound):
+            styles = ["(ツ)", "(•_•)", "(°_°)", "(¬‿¬)", "(ಠ_ಠ)"]
+            shrug = f"¯\\\\\\_{random.choice(styles)}\\_/¯"
+            await ctx.reply(f"{shrug}")
+        elif isinstance(error, commands.MissingRole):
+            await ctx.reply(
+                f"You do not have permission to use this command. {str(error)}"
+            )
+        elif isinstance(error, commands.NotOwner):
+            await ctx.reply("You are not my creator. You may not use this command.")
+        elif isinstance(error, UnknownError):
+            logging.error(f"UNKNOWN ERROR REACHED: {str(error)}")
+            await ctx.reply(
+                "Unreachable code has been reached. Logging details. I bet you are Lily or Arma..."
+            )
+        elif isinstance(error, NoDefaultError):
+            await ctx.reply(f"{str(error)}")
+        elif isinstance(error, NoRoleError):
+            await ctx.reply(f"{str(error)}")
+        elif isinstance(error, NotPrivateError):
+            await ctx.reply(f"{str(error)}")
+        else:
+            await ctx.send(
+                "Unable to complete the command. I am not sure which error was thrown."
+            )
+            logging.error(f"Generic Error: {str(error)}")
+
+    # TODO: Add listener for role change to update the color of a person to their default role.
 
     # Creator-Only commands
 
@@ -73,7 +144,7 @@ class EventsSys(commands.Cog, name="EventsSys"):
                 i
             ) in self.bot.rosters:  # TODO: make it save based on roster instance type
                 self.bot.librarian.put_roster(i, rosters[i].get_roster_data())
-            await ctx.reply(f"Rosters saved.")
+            await ctx.reply("Rosters saved.")
 
         except Exception as e:
             await ctx.reply(f"Unable to complete: {str(e)}")
@@ -89,10 +160,10 @@ class EventsSys(commands.Cog, name="EventsSys"):
             fetched = self.bot.librarian.get_all_rosters()
             if fetched is not None:
                 rosters = fetched
-                logging.info(f"Found and Loaded Rosters")
-            await ctx.reply(f"Roster Information Reloaded.")
+                logging.info("Found and Loaded Rosters")
+            await ctx.reply("Roster Information Reloaded.")
         except Exception as e:
-            await ctx.reply(f"Unable to complete: {str(e)}")
+            await ctx.reply("Unable to complete: {str(e)}")
 
     @commands.command(name="resort")
     @permissions.creator_only()
@@ -102,12 +173,12 @@ class EventsSys(commands.Cog, name="EventsSys"):
             new_positions = RosterExtended.sort_rosters(rosters)
             for i in new_positions:
                 channel = self.bot.get_channel(i)
-                await channel.edit(position=new_positions[i])
+                await channel.edit(position=new_positions[i])  # type: ignore
                 time.sleep(2)
-            await ctx.reply(f"Finished Sorting!")
+            await ctx.reply("Finished Sorting!")
         except Exception as e:
             await ctx.reply(f"Unable to complete: {str(e)}")
 
 
-async def setup(bot: commands.Bot):
-    await bot.add_cog(EventsSys(bot))
+async def setup(bot: BOKBot):
+    await bot.add_cog(BotSystems(bot))

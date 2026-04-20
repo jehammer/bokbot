@@ -5,6 +5,8 @@ import logging
 from bot import decor as permissions
 from pymongo import MongoClient
 
+from bot.models import BOKBot
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s: %(message)s",
@@ -52,7 +54,7 @@ def save_roles_info(config):
 class Roles(commands.Cog, name="Roles"):
     """Commands related to Discord roles"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: BOKBot):
         self.bot = bot
 
     @commands.Cog.listener()
@@ -357,5 +359,5 @@ class Roles(commands.Cog, name="Roles"):
             logging.error(f"Unable to update the type, Message: {str(e)}")
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: BOKBot):
     await bot.add_cog(Roles(bot))

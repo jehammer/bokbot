@@ -1,8 +1,7 @@
 from discord.ui import Modal, TextInput
 from discord import Interaction, TextStyle
-from bot.database import Librarian
 import logging
-from bot.services import RosterExtended
+from bot.services import RosterExtended, Utilities
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,18 +36,16 @@ class ProgModal(Modal):
 
     async def on_submit(self, interaction: Interaction):
         role_list = self.roles_input.value.splitlines()
-        logging.info(f"Updating Prog Role Data")
+        logging.info("Updating Prog Role Data")
         self.bot.librarian.put_progs(role_list)
-        logging.info(f"Updated Prog Role Data")
+        logging.info("Updated Prog Role Data")
         self.bot.limits = RosterExtended.get_limits(
             librarian=self.bot.librarian, roles_config=self.bot.config["raids"]["ranks"]
         )
         await interaction.response.send_message(self.language["Prog"]["Updated"])
-        return
 
     async def on_error(self, interaction: Interaction, error: Exception) -> None:
         logging.error(f"Prog Roles Update Error: {str(error)}")
         await interaction.response.send_message(
             f"{Utilities.format_error(self.user_language, self.language['Incomplete'])}"
         )
-        return

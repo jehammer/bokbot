@@ -2,6 +2,7 @@ import logging
 import discord
 import yaml
 from discord.ext import commands
+from bot.models import BOKBot
 from bot.services import Utilities
 from difflib import ndiff
 
@@ -262,5 +263,5 @@ class Helpers(commands.Cog):
             logging.error(f"Help command Error: {str(e)}")
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: BOKBot):
     await bot.add_cog(Helpers(bot))

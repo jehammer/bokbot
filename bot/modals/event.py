@@ -1,5 +1,3 @@
-from bot.models import roster
-from bot.models.event_roster import EventRoster
 from discord.ui import Modal, TextInput
 from discord import Interaction, TextStyle, Role
 from discord.utils import get

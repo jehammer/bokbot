@@ -16,6 +16,7 @@ import time
 import calendar
 
 from bot.models import Roster, EventRoster
+from bot.models import BOKBot
 from bot.services import Utilities
 
 logging.basicConfig(
@@ -51,7 +52,7 @@ def gather_roles(guild, config):
 class Admin(commands.Cog, name="Admin"):
     """Receives Administration commands"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: BOKBot):
         self.bot = bot
         self.scheduled_good_morning.start()
 
@@ -503,5 +504,5 @@ class Admin(commands.Cog, name="Admin"):
             logging.error(f"Good Morning Task Error: {str(e)}")
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: BOKBot):
     await bot.add_cog(Admin(bot))

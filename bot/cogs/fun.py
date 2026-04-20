@@ -3,11 +3,11 @@ import datetime
 import logging
 import random
 import time
-from discord import app_commands, Interaction, Member
+from discord import User, app_commands, Interaction, Member
 from discord.ext import commands
 
 from bot.modals import BirthdayModal
-from bot.models import Rank
+from bot.models import Rank, BOKBot
 from bot.services import Utilities, EmbedFactory
 
 logging.basicConfig(
@@ -20,7 +20,7 @@ logging.basicConfig(
 class Fun(commands.Cog, name="Fun"):
     """For Fun/Event Type Things"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: BOKBot):
         self.bot = bot
 
     @commands.command(name="fishing")
@@ -388,5 +388,24 @@ Goodnight BOK
             )
             logging.error(f"Quickie error: {str(e)}")
 
+    @commands.command(name="spam")
+    async def bit_of_spam(self, ctx: commands.Context):
+        """It is delicious"""
+        user_language = (
+            Utilities.get_language(ctx.author)
+            if isinstance(ctx.author, Member)
+            else "english"
+        )
+        try:
+            await ctx.send(
+                "https://cdn.discordapp.com/attachments/911730032286785536/1493310804152422452/spam.jpg"
+            )
+        except Exception as e:
+            await ctx.send(
+                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
+            )
+            logging.error(f"Spam error: {str(e)}")
 
+
+async def setup(bot: BOKBot):
     await bot.add_cog(Fun(bot))

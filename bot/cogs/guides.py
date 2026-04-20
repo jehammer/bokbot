@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 import logging
 
+from bot.models import BOKBot
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s: %(message)s",
@@ -12,7 +14,7 @@ logging.basicConfig(
 class Guides(commands.Cog, name="Guides"):
     """Receives trial guide commands"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: BOKBot):
         self.bot = bot
 
     @commands.command(name="hrc", aliases=["vhrc", "hrchm", "vhrchm"])
@@ -103,5 +105,5 @@ class Guides(commands.Cog, name="Guides"):
         )
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: BOKBot):
     await bot.add_cog(Guides(bot))

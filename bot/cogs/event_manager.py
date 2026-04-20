@@ -7,7 +7,7 @@ import time
 from bot import decor as permissions
 from bot.errors import *
 from bot.modals import *
-from bot.models import Roster, Count, EventRoster
+from bot.models import Roster, Count, EventRoster, BOKBot
 from bot.services import Utilities, RosterExtended, EmbedFactory
 from bot.ui import RosterSelector, UndoSelector
 import random
@@ -19,6 +19,7 @@ last4t = []
 # Singular function to get random zones
 def get_zone_option(cap):
     loop = True
+    ran = 0
     while loop:
         ran = random.randint(1, cap)
         if ran not in last4z:
@@ -40,7 +41,7 @@ def get_event_option():
 class EventManager(commands.Cog, name="EventsManager"):
     """For Direct Management Of Event Systems"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: BOKBot):
         self.bot = bot
 
     @app_commands.command(
@@ -461,5 +462,5 @@ class EventManager(commands.Cog, name="EventsManager"):
     #        logging.error(f"Add To Roster Error: {str(e)}")
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: BOKBot):
     await bot.add_cog(EventManager(bot))

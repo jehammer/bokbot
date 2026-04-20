@@ -1,8 +1,7 @@
-import discord
 from discord.ext import commands
 import logging
-import asyncio
 import random
+from bot.models import BOKBot
 from bot.services import Utilities
 
 logging.basicConfig(
@@ -15,7 +14,7 @@ logging.basicConfig(
 class Shames(commands.Cog, name="Shames"):
     """See peoples shames"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: BOKBot):
         self.bot = bot
 
     @commands.command(name="vundees")
@@ -128,5 +127,5 @@ class Shames(commands.Cog, name="Shames"):
             logging.error(f"Kiwa error: {str(e)}")
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: BOKBot):
     await bot.add_cog(Shames(bot))

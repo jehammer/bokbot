@@ -8,7 +8,7 @@ import time
 from bot import decor as permissions
 from bot.errors import *
 from bot.modals import *
-from bot.models import Roster, Count, EventRoster
+from bot.models import Roster, Count, EventRoster, BOKBot
 from bot.services import Utilities, RosterExtended, EmbedFactory
 from bot.ui import RosterSelector
 
@@ -30,7 +30,7 @@ logging.basicConfig(
 class Events(commands.Cog, name="Events"):
     """Commands related to Rosters for Trials, PVP, and other events"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: BOKBot):
         self.bot = bot
 
     @commands.command(name="su", aliases=["signup", "bu", "backup"])
@@ -368,6 +368,7 @@ class Events(commands.Cog, name="Events"):
         """Set or check your default for rosters | `!default [optional: role]`"""
         # TODO: Make Role mapper for this from the supported languages to dps, healer, or tank
         # TODO: Make it so this can be deleted with entering Clear or None as possible options
+        # TODO: Make this set peoples color role based on the default when this is set if posible.
         language = kwargs.get("language")
         try:
             role = role.lower()
@@ -438,5 +439,5 @@ class Events(commands.Cog, name="Events"):
             logging.error(f"Count check error: {str(e)}")
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: BOKBot):
     await bot.add_cog(Events(bot))

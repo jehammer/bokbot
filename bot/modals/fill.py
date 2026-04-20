@@ -1,4 +1,4 @@
-from bot.models.roster import Roster
+from bot.models import Roster
 from discord.ui import Modal, TextInput
 from discord import Interaction, TextStyle
 from bot.services import Utilities
