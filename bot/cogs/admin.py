@@ -454,6 +454,11 @@ class Admin(commands.Cog, name="Admin"):
                 today_month = today.month
                 today_day = today.day
                 today_year = today.year
+                birthday_str = f"{today_month}/{today_day}"
+                if birthday_str == "5/4":
+                    await channel.send(
+                        "Happy BOKiversary to everyone! May the winds of Kyne be with you!"
+                    )
                 for member in guild.members:
                     if any(
                         self.bot.config["roles"]["default"] in role.name
@@ -478,8 +483,10 @@ class Admin(commands.Cog, name="Admin"):
                             )
                         else:
                             await channel.send(f"{member.mention} Happy Anniversary!")
-                # TODO: Implement BOKiversary for May 4th each year and BOKBot Birthday in November checks
-                birthday_str = f"{today_month}/{today_day}"
+                if birthday_str == "11/19":
+                    await channel.send(
+                        "Happy Birthday to me! May the codebase grow just as we all do!"
+                    )
                 birthdays = self.bot.librarian.get_birthdays(birthday_str)
                 if birthdays:
                     for b in birthdays:
@@ -497,6 +504,12 @@ class Admin(commands.Cog, name="Admin"):
                                 await channel.send(
                                     f"{member.mention} Happy Leap Birthday!"
                                 )
+                if today.weekday() == 6:  # Sunday
+                    # Cleanup Undo Data'
+                    self.bot.librarian.delete_many_undo_data(
+                        datetime.datetime.now(datetime.timezone.utc)
+                    )
+
             except Exception as e:
                 await channel.send("Unable to get the Anniversaries.")
                 logging.error(f"Good Morning Task Anniversary Error: {str(e)}")

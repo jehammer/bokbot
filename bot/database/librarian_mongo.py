@@ -173,6 +173,11 @@ class Librarian:
         query = {"channel_name": channel_name}
         self._database.undo.delete_one(query)
 
+    def delete_many_undo_data(self, delete_date):
+        query = {"delete": {"$lte": delete_date}}
+        result = self._database.undo.delete_many(query)
+        logging.info(f"Deleted {result.deleted_count} undo roster data entries")
+
     # Default settings
     def get_default(self, user_id):
         db_data = self._database.defaults.find_one({"userID": int(user_id)})

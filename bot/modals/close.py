@@ -1,6 +1,7 @@
 from discord import Interaction, TextStyle
 from discord.ui import Modal, TextInput
 from bot.models import Roster
+from bot.models.bokbot import BOKBot
 from bot.services import Utilities, RosterExtended
 from bot.database import Librarian
 import logging
@@ -13,7 +14,7 @@ logging.basicConfig(
 
 
 class CloseModal(Modal):
-    def __init__(self, interaction: Interaction, bot, lang, channel_id):
+    def __init__(self, interaction: Interaction, bot: BOKBot, lang, channel_id):
         self.localization = bot.language[lang]["replies"]
         self.ui_language = bot.language[lang]["ui"]
         self.bot = bot
@@ -119,11 +120,8 @@ class CloseModal(Modal):
                 f"{self.localization['Close']['NoIncrease'] % self.name}"
             )
 
-        return
-
     async def on_error(self, interaction: Interaction, error: Exception) -> None:
         await interaction.response.send_message(
             f"{Utilities.format_error(self.user_language, self.localization['Incomplete'])}"
         )
         logging.error(f"Roster Close Error: {str(error)}")
-        return
