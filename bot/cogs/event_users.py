@@ -74,6 +74,9 @@ class Events(commands.Cog, name="Events"):
                 await ctx.reply(
                     f"{self.bot.language[user_language]['replies']['EventRoster']['Added']}"
                 )
+                await ctx.author.add_roles(
+                    ctx.guild.get_role(self.bot.rosters[channel_id].pingable)
+                )
                 return
 
             # Disqualifier check
