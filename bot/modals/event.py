@@ -67,7 +67,7 @@ class EventModal(Modal):
             default=self.memo_val,
             placeholder=self.ui_localization["EventRoster"]["Memo"]["Placeholder"],
             style=TextStyle.long,
-            max_length=200,
+            max_length=600,
             required=True,
         )
         self.add_item(self.leader_box)
