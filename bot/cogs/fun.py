@@ -406,6 +406,24 @@ Goodnight BOK
             )
             logging.error(f"Spam error: {str(e)}")
 
+    @commands.command(name="armauwu")
+    async def armasuwu(self, ctx: commands.Context):
+        """Why is everyone saying it suddenly?"""
+        user_language = (
+            Utilities.get_language(ctx.author)
+            if isinstance(ctx.author, Member)
+            else "english"
+        )
+        try:
+            await ctx.send(
+                "https://cdn.discordapp.com/attachments/911730032286785536/1512463759506149526/image-1.png"
+            )
+        except Exception as e:
+            await ctx.send(
+                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
+            )
+            logging.exception(f"Armasuwu error: {str(e)}")
+
 
 async def setup(bot: BOKBot):
     await bot.add_cog(Fun(bot))
