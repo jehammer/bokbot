@@ -333,6 +333,68 @@ class Admin(commands.Cog, name="Admin"):
             f"{self.bot.language[user_language]['replies']['MovedAnswer'] % new_command}"
         )
 
+    @commands.command(name="redomorning")
+    @permissions.creator_only()
+    async def redo_morning(self, ctx: commands.Context):
+        guild = ctx.guild
+        channel = ctx.channel
+        try:
+            today = datetime.datetime.today()
+            today_month = today.month
+            today_day = today.day
+            today_year = today.year
+            birthday_str = f"{today_month}/{today_day}"
+            if birthday_str == "5/4":
+                await channel.send(
+                    "Happy BOKiversary to everyone! May the winds of Kyne be with you!"
+                )
+            for member in guild.members:
+                if any(
+                    self.bot.config["roles"]["default"] in role.name
+                    for role in member.roles
+                ):
+                    continue
+                joined = member.joined_at
+                joined_month = joined.month
+                joined_day = joined.day
+                joined_year = joined.year
+                if (
+                    today_month == joined_month
+                    and today_day == joined_day
+                    and today_year > joined_year
+                ):
+                    if (
+                        member.id == 375768932377952257
+                        or member.id == 504470891972001803
+                    ):
+                        await channel.send(
+                            f"{member.mention} Happy Anniversary, we miss you buddy."
+                        )
+                    else:
+                        await channel.send(f"{member.mention} Happy Anniversary!")
+            if birthday_str == "11/19":
+                await channel.send(
+                    "Happy Birthday to me! May the codebase grow just as we all do!"
+                )
+            birthdays = self.bot.librarian.get_birthdays(birthday_str)
+            if birthdays:
+                for b in birthdays:
+                    member = guild.get_member(int(b))
+                    if member:
+                        await channel.send(f"{member.mention} Happy Birthday!")
+            if birthday_str == "2/28":
+                if calendar.isleap(today_year):
+                    return
+                leap_birthdays = self.bot.librarian.get_birthdays("2/29")
+                if leap_birthdays:
+                    for b in leap_birthdays:
+                        member = guild.get_member(int(b))
+                        if member:
+                            await channel.send(f"{member.mention} Happy Leap Birthday!")
+        except Exception as e:
+            await channel.send("Unable to get the Anniversaries.")
+            logging.error(f"Good Morning Task Anniversary Error: {str(e)}")
+
     # EVENTS:
 
     @commands.Cog.listener()
@@ -475,8 +537,8 @@ class Admin(commands.Cog, name="Admin"):
                         and today_year > joined_year
                     ):
                         if (
-                            member.global_name == "kuvxwb"
-                            or member.global_name == "muon.t"
+                            member.id == 375768932377952257
+                            or member.id == 504470891972001803
                         ):
                             await channel.send(
                                 f"{member.mention} Happy Anniversary, we miss you buddy."
