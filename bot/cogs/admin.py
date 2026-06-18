@@ -146,9 +146,14 @@ class Admin(commands.Cog, name="Admin"):
         """Shut down the bot, Owner only"""
         try:
             log_name = "log.log"
-            date = datetime.datetime.now().strftime("%m-%d-%Y")
-            time = datetime.datetime.now().strftime("%I:%M:%S %p")
+            now = datetime.datetime.now()
+            date = now.strftime("%m-%d-%Y")
+            time = now.strftime("%I:%M:%S %p")
             logging.info(f"Shutdown command received - {time} on {date}")
+            for handler in logging.root.handlers[:]:
+                handler.flush()
+                handler.close()
+                logging.root.removeHandler(handler)
             logging.shutdown()
             self.scheduled_good_morning.stop()
             if os.path.exists(log_name):
@@ -162,6 +167,7 @@ class Admin(commands.Cog, name="Admin"):
                     version += 1
                 path = os.path.join("logs", file_name)
                 shutil.move(log_name, path)
+                os.remove(log_name)
             await self.bot.close()
         except Exception as e:
             logging.error(f"Shutdown Error: {str(e)}")

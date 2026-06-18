@@ -1,9 +1,12 @@
 from discord import Interaction, TextStyle
 from discord.ui import Modal, TextInput
-from bot.models import Roster
+from errors.boterrors import (
+    MissingGuildError,
+    MissingInteractionError,
+    MissingRoleError,
+)
 from bot.models.bokbot import BOKBot
 from bot.services import Utilities, RosterExtended
-from bot.database import Librarian
 import logging
 
 logging.basicConfig(
@@ -15,6 +18,12 @@ logging.basicConfig(
 
 class CloseModal(Modal):
     def __init__(self, interaction: Interaction, bot: BOKBot, lang, channel_id):
+
+        if interaction is None:
+            raise MissingInteractionError
+        if interaction.guild is None:
+            raise MissingGuildError
+
         self.localization = bot.language[lang]["replies"]
         self.ui_language = bot.language[lang]["ui"]
         self.bot = bot
@@ -55,70 +64,82 @@ class CloseModal(Modal):
         self.add_item(self.runscount)
 
     async def on_submit(self, interaction: Interaction):
-        confirm_value = self.confirm.value.strip().lower()
+
+        if interaction is None:
+            raise MissingInteractionError
+        if interaction.guild is None:
+            raise MissingGuildError
+
+        confirm_val = self.confirm.value.strip().lower()
         runs_inc = self.runs.value.strip().lower()
-        if (
-            confirm_value != "n"
-            and confirm_value != "y"
-            and runs_inc != "n"
-            and runs_inc != "y"
-        ):
+
+        if confirm_val not in ["y", "n"] or runs_inc not in ["y", "n"]:
+            error_msg = self.localization["Close"]["BadConfirmError"]
             await interaction.response.send_message(
-                f"{Utilities.format_error(self.user_language, self.localization['Close']['BadConfirmError'])}"
+                Utilities.format_error(self.user_language, error_msg)
             )
             return
-        if confirm_value != "y":
+
+        if confirm_val == "n":
+            error_msg = self.localization["Close"]["CloseWithoutClose"]
             await interaction.response.send_message(
-                f"{Utilities.format_error(self.user_language, self.localization['Close']['CloseWithoutClose'])}"
+                Utilities.format_error(self.user_language, error_msg)
             )
             return
-        runs_increased = False
+
+        # 2. Extract and validate run count early to avoid nesting the try/except
         inc_val = 0
         if runs_inc == "y":
             try:
-                inc_val = int(self.runscount.value)
-                if inc_val < 1:
-                    inc_val = 1
-                elif inc_val > 10:
-                    raise ValueError
-                RosterExtended.increase_roster_count(
-                    self.bot.rosters[self.channel_id],
-                    inc_val,
-                    librarian=self.bot.librarian,
-                )
-                runs_increased = True
+                # Max 10 minimum 1.
+                inc_val = max(1, min(int(self.runscount.value), 10))
             except ValueError:
                 await interaction.response.send_message(
-                    f"{Utilities.format_error(self.user_language, self.localization['Close']['NotNumberError'])}"
+                    Utilities.format_error(
+                        self.user_language, self.localization["Close"]["NotNumberError"]
+                    )
                 )
                 return
 
-        logging.info(f"Deleting Roster {self.name}")
-        delete_date = RosterExtended.create_undo_delete_date(
-            self.bot.rosters[self.channel_id].date, self.bot.config["raids"]["timezone"]
-        )
-        self.bot.librarian.put_undo_data(
-            channel_name=self.name,
-            delete_date=delete_date,
-            data=self.bot.rosters[self.channel_id],
-        )
-        await interaction.guild.get_role(
-            self.bot.rosters[self.channel_id].pingable
-        ).delete()
-        self.bot.librarian.delete_roster(self.channel_id)
-        del self.bot.rosters[self.channel_id]
-        logging.info(f"Roster Deleted")
+            RosterExtended.increase_roster_count(
+                self.bot.rosters[self.channel_id],
+                inc_val,
+                librarian=self.bot.librarian,
+            )
 
-        if self.channel is not None:
+        # 3. Handle Role Logic (Guards instead of Else)
+        pingable_role = interaction.guild.get_role(
+            self.bot.rosters[self.channel_id].pingable
+        )
+        if pingable_role is None:
+            raise MissingRoleError
+
+        await pingable_role.delete()
+
+        # 4. Standard Deletion Sequence
+        logging.info(f"Deleting Roster {self.name}")
+        roster_data = self.bot.rosters[self.channel_id]
+        delete_date = RosterExtended.create_undo_delete_date(
+            roster_data.date, self.bot.config["raids"]["timezone"]
+        )
+
+        self.bot.librarian.put_undo_data(self.name, delete_date, roster_data)
+        self.bot.librarian.delete_roster(self.channel_id)
+
+        del self.bot.rosters[self.channel_id]
+        logging.info("Roster Deleted")
+
+        if self.channel:
             await self.channel.delete()
-        if runs_increased:
-            await interaction.response.send_message(
-                f"{self.localization['Close']['Increase'] % (self.name, inc_val)}"
-            )
-        else:
-            await interaction.response.send_message(
-                f"{self.localization['Close']['NoIncrease'] % self.name}"
-            )
+
+        # 5. Simplified response logic
+        key = "Increase" if inc_val > 0 else "NoIncrease"
+        msg = (
+            self.localization["Close"][key] % (self.name, inc_val)
+            if inc_val > 0
+            else self.localization["Close"][key] % self.name
+        )
+        await interaction.response.send_message(msg)
 
     async def on_error(self, interaction: Interaction, error: Exception) -> None:
         await interaction.response.send_message(

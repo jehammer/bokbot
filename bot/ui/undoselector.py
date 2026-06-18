@@ -17,7 +17,7 @@ class UndoSelect(ui.Select):
         data = self.bot.librarian.get_undo_data()
         self.rosters = data
         if data is None or len(data) == 0:
-            options.append(SelectOption(label="N/A"))
+            options.append(SelectOption(label="N/A", value="N/A"))
         else:
             used = []
             for i in data:
@@ -29,11 +29,9 @@ class UndoSelect(ui.Select):
                         new_label = f"{label}{count}".strip()
                         if new_label not in used:
                             label = new_label
-                            self.mapper[label] = i
                             break
                         count += 1
-                options.append(SelectOption(label=label))
-                self.mapper[label] = i
+                options.append(SelectOption(label=label, value=i))
                 used.append(label)
 
         super().__init__(
@@ -57,7 +55,7 @@ class UndoSelect(ui.Select):
             )
             return
 
-        channel_name = self.mapper[selected]
+        channel_name = selected
 
         await interaction.response.send_modal(
             UndoModal(

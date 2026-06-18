@@ -1,6 +1,6 @@
-from bot.models.roster import Roster
+from bot.models import Roster
 from discord.ui import Modal, TextInput
-from discord import Interaction, TextStyle, Role
+from discord import Interaction, TextStyle
 from discord.utils import get
 from bot.services import Utilities, RosterExtended, EmbedFactory
 import logging
@@ -10,42 +10,44 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s: %(message)s",
     handlers=[logging.FileHandler("log.log", mode="a"), logging.StreamHandler()],
-)  # , datefmt="%Y-%m-%d %H:%M:%S")
+)
 
 
 class TrialModal(Modal):
     def __init__(self, interaction: Interaction, bot, lang, channel_id=None):
+        self.new_roster = True
+        self.old_roster: Roster | None = (
+            copy.deepcopy(bot.rosters[channel_id]) if channel_id else None
+        )
+        self.new_roster = False if self.old_roster else True
+        self.leader_trial_val = (
+            f"{self.old_roster.leader},{self.old_roster.trial}"
+            if self.old_roster
+            else ""
+        )
+        self.date_val = f"{self.old_roster.date}" if self.old_roster else ""
+        self.limit_val = f"{self.old_roster.role_limit}" if self.old_roster else ""
+        self.role_nums_val = (
+            f"{self.old_roster.dps_limit},{self.old_roster.healer_limit},{self.old_roster.tank_limit}"
+            if self.old_roster
+            else "8,2,2"
+        )
+        self.memo_val = f"{self.old_roster.memo}" if self.old_roster else "None"
+        self.new_name = ""
         self.localization = bot.language[lang]["replies"]
         self.ui_localization = bot.language[lang]["ui"]
         self.config = bot.config
         self.limits = bot.limits
-        self.leader_trial_val = None
-        self.date_val = None
-        self.limit_val = None
-        self.role_nums_val = "8,2,2"
-        self.memo_val = "None"
-        self.new_roster = True
-        self.new_name = f""
         self.user_language = lang
         self.bot = bot
         self.channel = None
         self.change_name = True
         self.sort_channels = True
-        self.channel_id = channel_id
-        if self.channel_id is not None:
-            self.channel_id = channel_id
-            self.new_roster = False
-            self.old_roster = copy.deepcopy(self.bot.rosters[self.channel_id])
-            self.leader_trial_val = f"{self.old_roster.leader},{self.old_roster.trial}"
-            self.date_val = f"{self.old_roster.date}"
-            self.limit_val = f"{self.old_roster.role_limit}"
-            self.role_nums_val = f"{self.old_roster.dps_limit},{self.old_roster.healer_limit},{self.old_roster.tank_limit}"
-            self.memo_val = f"{self.old_roster.memo}"
+        self.channel_id = channel_id if channel_id else ""
         super().__init__(title=self.ui_localization["TrialModify"]["Title"])
         self.initialize()
 
     def initialize(self):
-        # Add all the items here based on what is above
         self.leader_trial = TextInput(
             label=self.ui_localization["TrialModify"]["LeaderTrial"]["Label"],
             placeholder=self.ui_localization["TrialModify"]["LeaderTrial"][
@@ -85,231 +87,234 @@ class TrialModal(Modal):
         self.add_item(self.role_nums)
         self.add_item(self.memo)
 
-    async def on_submit(self, interaction: Interaction):
-        # Split the values:
-        try:
-            roles = self.limits
+    async def validator(self, interaction: Interaction):
+        """Validation of user inputs for a new roster"""
+        curr_val = ""
+        # Role Limit
+        curr_val = self.limit.value
+        role_limit = int(curr_val)
+        if role_limit < 0 or role_limit > len(self.limits):
+            await interaction.response.send_message(
+                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['BadLimit'] % len(self.limits))}"
+            )
+            return None
 
-            role_limit = int(self.limit.value)
-            if role_limit < 0 or role_limit > len(roles):
-                await interaction.response.send_message(
-                    f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['BadLimit'] % len(roles))}"
-                )
-                return
-        except (NameError, ValueError) as e:
+        # Leader/Trial
+        curr_val = self.leader_trial.value
+        if "," not in curr_val:
             await interaction.response.send_message(
-                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['InvalidLimit'] % self.limit.value)}"
+                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['BadLeaderTrial'] % curr_val)}"
             )
-            return
-        try:
-            leader, trial = self.leader_trial.value.split(",")
-            trial.lstrip()
-        except (NameError, ValueError):
+            return None
+        leader, trial = [x.strip() for x in curr_val.split(",")]
+
+        # Role Nums Split
+        curr_val = self.role_nums.value
+        if self.role_nums.value.count(",") != 2:
             await interaction.response.send_message(
-                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['BadLeaderTrial'] % self.leader_trial.value)}"
+                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['BadRoleNums'] % curr_val)}"
             )
-            return
+            return None
+
+        # Role Nums DPS then Heal and Tank
+        raw_nums = self.role_nums.value.split(",")
         try:
-            dps_limit, healer_limit, tank_limit = self.role_nums.value.split(",")
-        except (NameError, ValueError):
-            await interaction.response.send_message(
-                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['BadRoleNums'] % self.role_nums.value)}"
-            )
-            return
-        try:
-            dps_limit = int(dps_limit.strip())
+            dps = int(raw_nums[0].strip())
         except ValueError:
             await interaction.response.send_message(
-                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['InvalidDPS'] % dps_limit)}"
+                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['InvalidDPS'] % raw_nums[0])}"
             )
-            return
+            return None
+
         try:
-            healer_limit = int(healer_limit.strip())
+            heal = int(raw_nums[1].strip())
         except ValueError:
             await interaction.response.send_message(
-                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['InvalidHealers'] % healer_limit)}`"
+                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['InvalidHealers'] % raw_nums[1])}"
             )
-            return
+            return None
+
         try:
-            tank_limit = int(tank_limit.strip())
+            tank = int(raw_nums[2].strip())
         except ValueError:
             await interaction.response.send_message(
-                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['InvalidTanks'] % tank_limit)}"
+                f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['InvalidTanks'] % raw_nums[2])}"
             )
-            return
+            return None
 
-        try:
-            formatted_date = RosterExtended.format_date(self.date.value)
-            category = interaction.guild.get_channel(self.config["raids"]["category"])
+        return {
+            "role_limit": role_limit,
+            "leader": leader,
+            "trial": trial,
+            "dps": dps,
+            "healer": heal,
+            "tank": tank,
+            "date": RosterExtended.format_date(self.date.value),
+        }
 
-            if not self.new_roster:
-                # Update all values then update the DB
-                self.bot.rosters[self.channel_id].trial = trial
-                self.bot.rosters[self.channel_id].leader = leader
-                self.bot.rosters[self.channel_id].dps_limit = dps_limit
-                self.bot.rosters[self.channel_id].healer_limit = healer_limit
-                self.bot.rosters[self.channel_id].tank_limit = tank_limit
-                self.bot.rosters[self.channel_id].date = formatted_date
-                self.bot.rosters[self.channel_id].memo = self.memo.value
-                self.bot.rosters[self.channel_id].role_limit = role_limit
-
-                self.channel = interaction.guild.get_channel(int(self.channel_id))
-
-                # Account for role changes where there is overflow
-                self.bot.rosters[self.channel_id].push_excess_to_overflow()
-
-                try:
-
-                    day_change = RosterExtended.did_day_change(
-                        self.old_roster.date,
-                        self.bot.rosters[self.channel_id].date,
-                        self.config["raids"]["timezone"],
-                    )
-                    trial_change = RosterExtended.did_trial_change(
-                        self.old_roster.trial, self.bot.rosters[self.channel_id].trial
-                    )
-                    if not day_change:
-                        self.sort_channels = False
-
-                    if not trial_change:
-                        self.change_name = False
-
-                    if self.sort_channels or self.change_name:
-                        self.new_name = RosterExtended.generate_channel_name(
-                            formatted_date, trial, self.config["raids"]["timezone"]
-                        )
-                        await self.channel.edit(name=self.new_name)
-
-                    if day_change or trial_change:
-                        name = RosterExtended.create_pingable_role_name(
-                            trial=self.bot.rosters[self.channel_id].trial,
-                            date=self.bot.rosters[self.channel_id].date,
-                            tz=self.config["raids"]["timezone"],
-                            guild=interaction.guild,
-                        )
-                        await interaction.guild.get_role(
-                            self.bot.rosters[self.channel_id].pingable
-                        ).edit(name=name)
-
-                except ValueError as e:
-                    await interaction.response.send_message(
-                        f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['NewNameErr'])}"
-                    )
-                    logging.info(f"New Name Value Error Existing Roster: {e}")
-                    return
-
-            elif self.new_roster:
-                try:
-                    logging.info(f"Creating new channel.")
-                    try:
-                        new_name = RosterExtended.generate_channel_name(
-                            formatted_date, trial, self.config["raids"]["timezone"]
-                        )
-                        self.channel = await category.create_text_channel(new_name)
-                        self.channel_id = self.channel.id
-                    except Exception as e:
-                        await interaction.response.send_message(
-                            f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['CantCreate'])}"
-                        )
-                        logging.error(f"Unable To Create New Roster Channel: {str(e)}")
-                        return
-
-                    self.bot.rosters[self.channel_id] = RosterExtended.factory(
-                        leader,
-                        trial,
-                        formatted_date,
-                        dps_limit,
-                        healer_limit,
-                        tank_limit,
-                        role_limit,
-                        self.memo.value,
-                        self.config,
-                    )
-
-                    group_role = RosterExtended.create_pingable_role_name(
-                        trial=self.bot.rosters[self.channel_id].trial,
-                        date=self.bot.rosters[self.channel_id].date,
-                        tz=self.config["raids"]["timezone"],
-                        guild=interaction.guild,
-                    )
-
-                    role: Role = await interaction.guild.create_role(
-                        name=group_role, mentionable=True
-                    )
-                    self.bot.rosters[self.channel_id].pingable = role.id
-                    roles_req = ""
-                    if isinstance(roles[role_limit], list):
-                        # Need to work with 3 roles to check, dps | tank | healer order
-
-                        limiter_dps = get(
-                            interaction.guild.roles, name=roles[role_limit][0]
-                        )
-                        limiter_tank = get(
-                            interaction.guild.roles, name=roles[role_limit][1]
-                        )
-                        limiter_healer = get(
-                            interaction.guild.roles, name=roles[role_limit][2]
-                        )
-
-                        roles_req += f"{limiter_dps.mention} {limiter_tank.mention} {limiter_healer.mention}"
-
-                    else:
-                        limiter = get(interaction.guild.roles, name=roles[role_limit])
-                        roles_req += f"{limiter.mention}"
-
-                    embed = EmbedFactory.create_new_roster(
-                        trial=self.bot.rosters[self.channel_id].trial,
-                        date=self.bot.rosters[self.channel_id].date,
-                        roles_req=roles_req,
-                        leader=self.bot.rosters[self.channel_id].leader,
-                        memo=self.bot.rosters[self.channel_id].memo,
-                        pingable=self.bot.rosters[self.channel_id].pingable,
-                    )
-                    await self.channel.send(embed=embed)
-
-                    logging.info(f"Roster Channel: channelID: {str(self.channel.id)}")
-                    self.channel_id = self.channel.id
-
-                except Exception as e:
-                    await interaction.response.send_message(
-                        f"{Utilities.format_error(self.user_language, self.localization['TrialModify']['CantEmbed'])}"
-                    )
-                    logging.error(f"Raid Creation Channel And Embed Error: {str(e)}")
-                    return
-            else:
-                await interaction.response.send_message(
-                    f"{Utilities.format_error(self.user_language, self.localization['Unreachable'])}"
-                )
-                return
-        except Exception as e:
-            logging.error(
-                f"Trial/Modify Error During Channel Create and Embed: {str(e)}"
-            )
-            await interaction.response.send_message(
-                f"{Utilities.format_error(self.user_language, self.localization['Unreachable'])}"
-            )
-            return
-
-        self.bot.librarian.put_roster(
-            self.channel_id, self.bot.rosters[self.channel_id]
+    async def update_existing_roster(self, interaction: Interaction, data):
+        """Update Existing Rosters with new data"""
+        if self.old_roster is None:
+            raise RuntimeError("Old roster is missing. Blame Arma or Lily")
+        roster = self.bot.rosters[self.channel_id]
+        roster.trial, roster.leader = data["trial"], data["leader"]
+        roster.dps_limit, roster.healer_limit, roster.tank_limit = (
+            data["dps"],
+            data["healer"],
+            data["tank"],
         )
-        self.bot.dispatch("sort_rosters")
+        roster.date, roster.memo, roster.role_limit = (
+            data["date"],
+            self.memo.value,
+            data["role_limit"],
+        )
 
-        if self.new_roster:
-            await interaction.response.send_message(
-                f"{self.bot.language[self.user_language]['replies']['TrialModify']['NewRosterCreated'] % self.channel.name}"
+        if interaction.guild is None:
+            raise RuntimeError(
+                f"{Utilities.format_error(self.user_language, self.localization['MissingGuild'])}"
             )
 
-        elif not self.new_roster:
+        self.channel = interaction.guild.get_channel(int(self.channel_id))
+        if self.channel is None:
+            raise ValueError("Channel not found. Blame Arma or Lily")
+        roster.push_excess_to_overflow()
+
+        day_change = RosterExtended.did_day_change(
+            self.old_roster.date, data["date"], self.config["raids"]["timezone"]
+        )
+        trial_change = RosterExtended.did_trial_change(
+            self.old_roster.trial, data["trial"]
+        )
+
+        if not day_change:
+            self.sort_channels = False
+        if not trial_change:
+            self.change_name = False
+
+        if self.sort_channels or self.change_name:
+            self.new_name = RosterExtended.generate_channel_name(
+                data["date"], data["trial"], self.config["raids"]["timezone"]
+            )
+            await self.channel.edit(name=self.new_name)
+
+        if day_change or trial_change:
+            name = RosterExtended.create_pingable_role_name(
+                trial=roster.trial,
+                date=roster.date,
+                tz=self.config["raids"]["timezone"],
+                guild=interaction.guild,
+            )
+            if role := interaction.guild.get_role(roster.pingable):
+                await role.edit(name=name)
+            else:
+                raise ValueError("Role not found. Blame Arma or Lily")
+
+    async def create_new_roster(self, interaction: Interaction, data, category):
+        """Create a new roster with input data"""
+
+        if interaction.guild is None:
+            raise RuntimeError(
+                f"{Utilities.format_error(self.user_language, self.localization['MissingGuild'])}"
+            )
+        new_name = RosterExtended.generate_channel_name(
+            data["date"], data["trial"], self.config["raids"]["timezone"]
+        )
+        self.channel = await category.create_text_channel(new_name)
+        if self.channel is None:
+            raise ValueError("Channel not found. Blame Arma or Lily")
+        self.channel_id = self.channel.id
+
+        self.bot.rosters[self.channel_id] = RosterExtended.factory(
+            data["leader"],
+            data["trial"],
+            data["date"],
+            data["dps"],
+            data["healer"],
+            data["tank"],
+            data["role_limit"],
+            self.memo.value,
+            self.config,
+        )
+
+        group_role_name = RosterExtended.create_pingable_role_name(
+            trial=data["trial"],
+            date=data["date"],
+            tz=self.config["raids"]["timezone"],
+            guild=interaction.guild,
+        )
+        group_role = await interaction.guild.create_role(
+            name=group_role_name, mentionable=True
+        )
+        self.bot.rosters[self.channel_id].pingable = group_role.id
+
+        # Determine mentions
+        roles_req = ""
+        current_limit = self.limits[data["role_limit"]]
+        if isinstance(current_limit, list):
+            mentions = [
+                role.mention
+                for n in current_limit
+                if (role := get(interaction.guild.roles, name=n)) is not None
+            ]
+            roles_req = " ".join(mentions)
+        else:
+            role = get(interaction.guild.roles, name=current_limit)
+            if role is not None:
+                roles_req = role.mention
+
+        embed = EmbedFactory.create_new_roster(
+            trial=data["trial"],
+            date=data["date"],
+            roles_req=roles_req,
+            leader=data["leader"],
+            memo=self.memo.value,
+            pingable=group_role.id,
+        )
+        await self.channel.send(embed=embed)
+
+    async def on_submit(self, interaction: Interaction):
+        if interaction is None:
+            raise ValueError("Interaction is missing. Blame Arma or Lily")
+        if interaction.guild is None:
+            raise ValueError(
+                f"{Utilities.format_error(self.user_language, self.localization['MissingGuild'])}"
+            )
+        data = await self.validator(interaction)
+        if not data:
+            return
+
+        try:
+            category = interaction.guild.get_channel(self.config["raids"]["category"])
+            if category is None:
+                raise ValueError("Category not found. Blame Arma or Lily")
+            if self.new_roster:
+                await self.create_new_roster(interaction, data, category)
+            else:
+                await self.update_existing_roster(interaction, data)
+
+            if self.channel is None:
+                raise ValueError("Channel is missing.")
+
+            self.bot.librarian.put_roster(
+                self.channel_id, self.bot.rosters[self.channel_id]
+            )
+            self.bot.dispatch("sort_rosters")
+
+            res_key = "NewRosterCreated" if self.new_roster else "ExistingUpdated"
             await interaction.response.send_message(
-                f"{self.bot.language[self.user_language]['replies']['TrialModify']['ExistingUpdated'] % self.channel.name}"
+                f"{self.localization['TrialModify'][res_key] % self.channel.name}"
             )
 
-        return
+        except Exception as e:
+            logging.error(f"Submit Error: {str(e)}")
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    f"{Utilities.format_error(self.user_language, self.localization['Incomplete'])}"
+                )
 
     async def on_error(self, interaction: Interaction, error: Exception) -> None:
-        await interaction.response.send_message(
-            f"{Utilities.format_error(self.user_language, self.localization['Incomplete'])}"
-        )
-        logging.error(f"Trial Creation/Modify Error: {str(error)}")
-        return
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                f"{Utilities.format_error(self.user_language, self.localization['Incomplete'])}"
+            )
+        logging.error(f"Trial Modal Global Error: {str(error)}")

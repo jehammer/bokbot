@@ -36,3 +36,15 @@ class BotUserError(Exception):
 
 class NotPrivateError(app_commands.AppCommandError):
     pass
+
+
+class MissingInteractionError(app_commands.AppCommandError):
+    pass
+
+
+class MissingGuildError(app_commands.AppCommandError):
+    pass
+
+
+class MissingRoleError(app_commands.AppCommandError):
+    pass

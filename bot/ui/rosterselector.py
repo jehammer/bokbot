@@ -19,7 +19,7 @@ class RosterSelect(ui.Select):
 
         options = []
         if self.rosters is None or len(self.rosters) == 0:
-            options.append(SelectOption(label="N/A"))
+            options.append(SelectOption(label="N/A", value="N/A"))
         else:
             used = []
             for i in self.rosters:
@@ -35,7 +35,7 @@ class RosterSelect(ui.Select):
                             self.channel_mapper[label] = i
                             break
                         count += 1
-                options.append(SelectOption(label=label))
+                options.append(SelectOption(label=label, value=str(i)))
                 self.channel_mapper[label] = i
                 used.append(label)
 
@@ -61,8 +61,8 @@ class RosterSelect(ui.Select):
             )
             return
 
-        # Fetch Key from value for channel ID
-        channel_id = int(self.channel_mapper[selected])
+        # Fetch channel ID directly from option value
+        channel_id = int(selected)
 
         roster = self.rosters[channel_id]
 

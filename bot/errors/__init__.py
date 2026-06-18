@@ -10,4 +10,7 @@ __all__ = [
     "NoRoleError",
     "BotUserError",
     "NotPrivateError",
+    "MissingInteractionError",
+    "MissingGuildError",
+    "MissingRoleError",
 ]
