@@ -42,6 +42,7 @@ administration:
   private: # Private Channel ID
   general: # General channel ID
   reports: # Channel you want reports to go to, use same ID as private if you want
-
-    
+  forbidden: # Channel ID where if someone posts in it they will get automatically jailed for manual review, all posts made in the past hour will be auto deleted.
+  jail: # Channel ID where the bot will send a message alerting to a jailed user.
+  jail_log: # Channel ID where the bot will log all jailed users and their roles that were removed.
 

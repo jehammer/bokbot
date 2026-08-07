@@ -1,12 +1,9 @@
 import discord
-from discord import Member, FFmpegPCMAudio
+from discord import Member, Message, User, utils, ForumChannel, CategoryChannel
 from discord.ext import commands, tasks
 import logging
 import asyncio
 
-from gtts import gTTS
-
-from bot import decor as permissions
 import datetime
 import shutil
 import re
@@ -15,9 +12,11 @@ import os
 import time
 import calendar
 
+from bot.errors.boterrors import PrivateChannelNotFoundError
 from bot.models import Roster, EventRoster
 from bot.models import BOKBot
 from bot.services import Utilities, embed_factory
+from bot.errors import GuildNotFoundError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,10 +38,10 @@ def gather_roles(guild, config):
     global ranks
     global poons
     global other
-    default = discord.utils.get(guild.roles, name=config["roles"]["default"])
-    ranks = discord.utils.get(guild.roles, name=config["roles"]["ranks"])
-    poons = discord.utils.get(guild.roles, name=config["roles"]["poons"])
-    other = discord.utils.get(guild.roles, name=config["roles"]["other"])
+    default = utils.get(guild.roles, name=config["roles"]["default"])
+    ranks = utils.get(guild.roles, name=config["roles"]["ranks"])
+    poons = utils.get(guild.roles, name=config["roles"]["poons"])
+    other = utils.get(guild.roles, name=config["roles"]["other"])
     logging.info("Global Roles Set")
 
 
@@ -56,33 +55,115 @@ class AdminSys(commands.Cog, name="AdminSystems"):
     # EVENTS:
 
     @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.author == self.bot.user:
+            return
+
+        if message.channel.id == self.bot.config["administration"]["forbidden"]:
+            self.bot.dispatch("trap_sprung", message)
+        await self.bot.process_commands(message)
+
+    @commands.Cog.listener()
+    async def on_trap_sprung(self, message: Message):
+        # Trap is sprung, get all the data needed and validate things.
+        guild = message.guild
+        if guild is None:
+            logging.error("Trap Sprung: Guild is None")
+            raise GuildNotFoundError("Guild is None")
+        member = message.author
+        if isinstance(member, User):
+            member = guild.get_member(member.id)
+            if member is None:
+                logging.error("Trap Sprung: Member is None")
+                return
+        private_channel = guild.get_channel(
+            self.bot.config["administration"]["private"]
+        )
+        if private_channel is None:
+            logging.error("Trap Sprung: Private Channel is None")
+            raise PrivateChannelNotFoundError()
+        elif isinstance(private_channel, (ForumChannel, CategoryChannel)):
+            logging.error("Trap Sprung: Private Channel is a Forum or Category Channel")
+            return
+        jail_role = utils.get(guild.roles, name=self.bot.config["roles"]["jail"])
+        if jail_role is None:
+            logging.error("Trap Sprung: Jail role not found")
+            return
+        jail_channel = guild.get_channel(self.bot.config["administration"]["jail"])
+        if jail_channel is None:
+            logging.error("Trap Sprung: Jail channel not found")
+            return
+        elif isinstance(jail_channel, (ForumChannel, CategoryChannel)):
+            logging.error("Trap Sprung: Jail channel is a Forum or Category Channel")
+            return
+        jail_log_channel = guild.get_channel(
+            self.bot.config["administration"]["jail_log"]
+        )
+        if jail_log_channel is None:
+            logging.error("Trap Sprung: Jail log channel not found")
+            return
+        elif isinstance(jail_log_channel, (ForumChannel, CategoryChannel)):
+            logging.error(
+                "Trap Sprung: Jail log channel is a Forum or Category Channel"
+            )
+            return
+        officer_role = utils.get(guild.roles, name=self.bot.config["roles"]["officer"])
+        if officer_role is None:
+            logging.error("Trap Sprung: Officer role not found")
+            return
+
+        # Gather up user data and then jail them.
+        user_roles = ", ".join(role.name for role in member.roles)
+        for role in member.roles:
+            await member.remove_roles(role)
+        await member.add_roles(jail_role)
+        await private_channel.send(
+            f"{member.mention} you are imprisoned here for posting in the forbidden channel pending review by {officer_role.mention}"
+        )
+        await jail_log_channel.send(
+            f"{member.mention} has been jailed for posting in the forbidden channel.\nRoles removed: {user_roles}"
+        )
+
+        # Fetch all messages from past hour from the author and purge them
+        time_delta = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+            hours=1
+        )
+        messages: list[Message] = []
+
+        # Text and Voice-Text channels
+        for channel in guild.text_channels + guild.voice_channels:
+            try:
+                async for msg in channel.history(after=time_delta, limit=None):
+                    if msg.author == member:
+                        messages.append(msg)
+            except discord.Forbidden:
+                continue
+
+            for message in messages:
+                await message.delete()
+
+    @commands.Cog.listener()
     async def on_ready(self):
         gather_roles(self.bot.get_guild(self.bot.config["guild"]), self.bot.config)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        try:
-            guild = member.guild
-            if self.bot.config["roles"]["default"] != "none":
-                await member.add_roles(default, ranks, poons, other)
-                logging.info(
-                    f"Added Roles: {str(default)}, {str(ranks)}, {str(poons)}, {str(other)} to: {member.display_name}"
-                )
-            await guild.system_channel.send(
-                f"Welcome {member.mention} to Breath Of Kynareth! Winds of Kyne be with you!\n"
-                f"Please read the rules in <#847968244949844008> and follow the directions for "
-                f"access to the rest of the server.\n"
-                f"Once you do be sure to check out how to get ranked in <#933821777149329468>\n"
-                f"If something seems wrong just ping the Storm Bringers."
+        guild = member.guild
+        if guild is None:
+            logging.error("Member Join: Guild is None")
+            raise GuildNotFoundError("Member Join: Guild is None")
+        if self.bot.config["roles"]["default"] != "none":
+            await member.add_roles(default, ranks, poons, other)
+            logging.info(
+                f"Added Roles: {str(default)}, {str(ranks)}, {str(poons)}, {str(other)} to: {member.display_name}"
             )
-        except Exception as e:
-            private_channel = guild.get_channel(
-                self.bot.config["administration"]["private"]
-            )
-            await private_channel.send(
-                "Unable to apply initial role and/or welcome the new user"
-            )
-            logging.error(f"Member Join Error: {str(e)}")
+        await guild.system_channel.send(
+            f"Welcome {member.mention} to Breath Of Kynareth! Winds of Kyne be with you!\n"
+            f"Please read the rules in <#847968244949844008> and follow the directions for "
+            f"access to the rest of the server.\n"
+            f"Once you do be sure to check out how to get ranked in <#933821777149329468>\n"
+            f"If something seems wrong just ping the Storm Bringers."
+        )
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: Member):

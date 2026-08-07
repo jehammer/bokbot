@@ -5,18 +5,18 @@ roles:
   default: none # role everyone gets when joining, must exist in discord
   have_lock: false # If you want someone to use !agree and agree to rules before joining the server
   unlock: none # If have_lock is true, this will let people join the rest of the server
+  jail: none # Role name for people who are jailed, must exist in discord
 
 agree: Put a message here to DM to people when/if they agree to your rules
 
 vanity:
   # You will have to add these yourself, the bot will handle the rest.
   type:
-    <:Emoji_Name:Emoji_ID>: 'Role name in Discord'
-
+    <:Emoji_Name:Emoji_ID>: "Role name in Discord"
 
 #Example:
 #vanity:
-  #media: # In this case, the type here is media
-    #<:Follower:9338158446076841996>: 'Youtube Follower'
-  #color:
-    #<Blue:4338158446076841996>: 'Blue'
+#media: # In this case, the type here is media
+#<:Follower:9338158446076841996>: 'Youtube Follower'
+#color:
+#<Blue:4338158446076841996>: 'Blue'

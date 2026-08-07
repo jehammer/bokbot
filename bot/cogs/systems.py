@@ -1,9 +1,10 @@
 import random
 
-from discord import Game, app_commands, Interaction
+from discord import CategoryChannel, ForumChannel, Game, app_commands, Interaction
+from discord.abc import PrivateChannel
 from discord.ext import commands
 import logging
-import time
+import asyncio
 
 # My created imports
 from bot import decor as permissions
@@ -13,6 +14,7 @@ from bot.errors import (
     NotPrivateError,
     UnknownError,
 )
+from bot.errors import GuildNotFoundError
 from bot.models import BOKBot
 from bot.services import RosterExtended
 
@@ -77,10 +79,16 @@ class BotSystems(commands.Cog, name="BotSystems"):
             new_positions = RosterExtended.sort_rosters(self.bot.rosters)
             for i in new_positions:
                 channel = self.bot.get_channel(i)
+                if channel is None:
+                    logging.error(f"Channel is None for ID: {i}")
+                    continue
+                if isinstance(channel, PrivateChannel):
+                    logging.error(f"Channel is a Private: {i}")
+                    continue
                 await channel.edit(position=new_positions[i])
-                time.sleep(2)
+                await asyncio.sleep(2)
         except Exception as e:
-            logging.error(f"Position Change Error: {str(e)}")
+            logging.exception(f"Position Change Error: {str(e)}")
             return
 
     @commands.Cog.listener()
@@ -111,6 +119,26 @@ class BotSystems(commands.Cog, name="BotSystems"):
                 "Unable to complete the command. I am not sure which error was thrown."
             )
             logging.error(f"Generic Error: {str(error)}")
+
+    @commands.Cog.listener()
+    async def on_error(self, ctx, error):
+        guild = self.bot.get_guild(self.bot.config["guild"])
+        if guild is None:
+            logging.error("Guild is None When Getting Guild By Bot In Error Catch")
+            return
+        private_channel = guild.get_channel(
+            self.bot.config["administration"]["private"]
+        )
+        if private_channel is None:
+            logging.error(
+                "Private Channel is None When Getting Guild By Bot In Error Catch"
+            )
+            return
+        elif isinstance(private_channel, (ForumChannel, CategoryChannel)):
+            logging.error("Private Channel is a Forum or Category, not a TextChannel")
+            return
+        if isinstance(error, GuildNotFoundError):
+            await private_channel.send(f"GuildNotFoundError: {str(error)}.")
 
     # TODO: Add listener for role change to update the color of a person to their default role.
 
@@ -174,7 +202,7 @@ class BotSystems(commands.Cog, name="BotSystems"):
             for i in new_positions:
                 channel = self.bot.get_channel(i)
                 await channel.edit(position=new_positions[i])  # type: ignore
-                time.sleep(2)
+                await asyncio.sleep(2)
             await ctx.reply("Finished Sorting!")
         except Exception as e:
             await ctx.reply(f"Unable to complete: {str(e)}")

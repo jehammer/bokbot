@@ -48,3 +48,11 @@ class MissingGuildError(app_commands.AppCommandError):
 
 class MissingRoleError(app_commands.AppCommandError):
     pass
+
+
+class GuildNotFoundError(Exception):
+    pass
+
+
+class PrivateChannelNotFoundError(Exception):
+    pass
