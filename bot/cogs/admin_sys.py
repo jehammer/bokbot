@@ -141,6 +141,8 @@ class AdminSys(commands.Cog, name="AdminSystems"):
 
             for message in messages:
                 await message.delete()
+            self.bot.jail_count += 1
+            self.bot.librarian.put_jail(self.bot.jail_id, self.bot.jail_count)
 
     @commands.Cog.listener()
     async def on_ready(self):

@@ -280,6 +280,16 @@ class Librarian:
         query = {"userID": int(user_id)}
         self._database.birthdays.delete_one(query)
 
+    def put_jail(self, message_id, count):
+        item = {"key": "jail", "messageID": int(message_id), "count": int(count)}
+        self._database.misc.replace_one({"key": "jail"}, item, upsert=True)
+
+    def get_jail(self):
+        db_data = self._database.misc.find_one({"key": "jail"})
+        if db_data:
+            return db_data
+        return None
+
     def close(self):
         self._client.close()
 

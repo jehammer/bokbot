@@ -56,3 +56,11 @@ class GuildNotFoundError(Exception):
 
 class PrivateChannelNotFoundError(Exception):
     pass
+
+
+class ChannelNotFoundError(Exception):
+    pass
+
+
+class WrongChannelTypeError(Exception):
+    pass

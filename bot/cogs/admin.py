@@ -1,5 +1,7 @@
 import discord
 from discord import Member, FFmpegPCMAudio
+from discord import ForumChannel
+from discord import CategoryChannel
 from discord.ext import commands, tasks
 import logging
 import asyncio
@@ -15,6 +17,7 @@ import os
 import time
 import calendar
 
+from bot.errors.boterrors import ChannelNotFoundError, GuildNotFoundError
 from bot.models import Roster, EventRoster
 from bot.models import BOKBot
 from bot.services import Utilities
@@ -400,6 +403,26 @@ class Admin(commands.Cog, name="Admin"):
         except Exception as e:
             await channel.send("Unable to get the Anniversaries.")
             logging.error(f"Good Morning Task Anniversary Error: {str(e)}")
+
+    @commands.command(name="setupjail")
+    @permissions.creator_only()
+    async def setup_jail(self, ctx: commands.Context):
+        guild = ctx.guild
+        if guild is None:
+            logging.error("Guild is None When Getting Guild By Bot In Error Catch")
+            raise GuildNotFoundError("Setup Jail: Guild is None")
+        jail_channel = guild.get_channel(self.bot.config["administration"]["jail"])
+        if jail_channel is None:
+            logging.error("Trap Sprung: Jail channel not found")
+            raise ChannelNotFoundError("Setup Jail: Jail Channel is None")
+        elif isinstance(jail_channel, (ForumChannel, CategoryChannel)):
+            logging.error("Trap Sprung: Jail channel is a Forum or Category Channel")
+            raise ChannelNotFoundError(
+                "Setup Jail: Jail channel is a Forum or Category Channel"
+            )
+        message = await jail_channel.send("Accounts Captured: 0")
+        self.bot.librarian.put_jail(message.id, 0)
+        await ctx.reply("Setup complete!")
 
 
 async def setup(bot: BOKBot):

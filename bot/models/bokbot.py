@@ -10,3 +10,5 @@ class BOKBot(commands.Bot):
         self.rosters: dict = rosters
         self.language: dict = language
         self.limits: list = []
+        self.jail_id: int = 0
+        self.jail_count: int = 0
