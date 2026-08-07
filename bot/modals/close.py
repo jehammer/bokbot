@@ -1,6 +1,6 @@
 from discord import Interaction, TextStyle
 from discord.ui import Modal, TextInput
-from errors.boterrors import (
+from bot.errors import (
     MissingGuildError,
     MissingInteractionError,
     MissingRoleError,

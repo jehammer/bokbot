@@ -7,7 +7,7 @@ import time
 
 # My created imports
 from bot import decor as permissions
-from bot.errors.boterrors import (
+from bot.errors import (
     NoDefaultError,
     NoRoleError,
     NotPrivateError,
