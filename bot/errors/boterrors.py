@@ -2,6 +2,42 @@ from discord.ext import commands
 from discord import app_commands
 
 
+import inspect
+
+
+class AutoDataException(Exception):
+    """Base exception that automatically grabs local data from where it was raised."""
+
+    def __init__(self, message="An error occurred"):
+        # Index [1] gets the frame of the function that raised THIS exception
+        caller_frame = inspect.stack()[1].frame
+
+        # Save variables directly to the instance
+        self.function_name = caller_frame.f_code.co_name
+
+        # Format the default message with the data
+        detailed_msg = f"{self.function_name}: {message}\n"
+        super().__init__(detailed_msg)
+
+
+class EventGuildNotFoundError(AutoDataException):
+    """Raised when a guild is not found in an event listener."""
+
+    pass
+
+
+class EventChannelNotFoundError(AutoDataException):
+    """Raised when a channel is not found in an event listener."""
+
+    pass
+
+
+class EventChannelInvalidTypeError(AutoDataException):
+    """Raised when a channel is of an invalid type in an event listener."""
+
+    pass
+
+
 class IODBError(Exception):
     pass
 
@@ -42,7 +78,7 @@ class MissingInteractionError(app_commands.AppCommandError):
     pass
 
 
-class MissingGuildError(app_commands.AppCommandError):
+class AppCommandGuildNotFoundError(app_commands.AppCommandError):
     pass
 
 
@@ -50,17 +86,21 @@ class MissingRoleError(app_commands.AppCommandError):
     pass
 
 
-class GuildNotFoundError(Exception):
+class CommandGuildNotFoundError(commands.CommandError):
     pass
 
 
-class PrivateChannelNotFoundError(Exception):
+class AppCommandGuildNotFoundError(app_commands.AppCommandError):
     pass
 
 
-class ChannelNotFoundError(Exception):
+class PrivateChannelNotFoundError(AutoDataException):
     pass
 
 
-class WrongChannelTypeError(Exception):
+class ChannelNotFoundError(AutoDataException):
+    pass
+
+
+class WrongChannelTypeError(AutoDataException):
     pass

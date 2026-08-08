@@ -13,6 +13,7 @@ import time
 import calendar
 
 from bot.errors.boterrors import PrivateChannelNotFoundError
+from bot.errors.validation import Validators
 from bot.models import Roster, EventRoster
 from bot.models import BOKBot
 from bot.services import Utilities, embed_factory
@@ -61,7 +62,6 @@ class AdminSys(commands.Cog, name="AdminSystems"):
 
         if message.channel.id == self.bot.config["administration"]["forbidden"]:
             self.bot.dispatch("trap_sprung", message)
-        await self.bot.process_commands(message)
 
     @commands.Cog.listener()
     async def on_trap_sprung(self, message: Message):
@@ -76,40 +76,23 @@ class AdminSys(commands.Cog, name="AdminSystems"):
             if member is None:
                 logging.error("Trap Sprung: Member is None")
                 return
-        private_channel = guild.get_channel(
-            self.bot.config["administration"]["private"]
+        private_channel = Validators.validate_channel(
+            guild.get_channel(self.bot.config["administration"]["private"])
         )
-        if private_channel is None:
-            logging.error("Trap Sprung: Private Channel is None")
-            raise PrivateChannelNotFoundError()
-        elif isinstance(private_channel, (ForumChannel, CategoryChannel)):
-            logging.error("Trap Sprung: Private Channel is a Forum or Category Channel")
-            return
+
         jail_role = utils.get(guild.roles, name=self.bot.config["roles"]["jail"])
         if jail_role is None:
             logging.error("Trap Sprung: Jail role not found")
             return
         jail_channel = guild.get_channel(self.bot.config["administration"]["jail"])
-        if jail_channel is None:
-            logging.error("Trap Sprung: Jail channel not found")
-            return
-        elif isinstance(jail_channel, (ForumChannel, CategoryChannel)):
-            logging.error("Trap Sprung: Jail channel is a Forum or Category Channel")
-            return
-        jail_log_channel = guild.get_channel(
-            self.bot.config["administration"]["jail_log"]
+        Validators.validate_channel(jail_channel, "Trap Sprung")
+        jail_log_channel = Validators.validate_channel(
+            guild.get_channel(self.bot.config["administration"]["jail_log"]),
+            "Trap Sprung",
         )
-        if jail_log_channel is None:
-            logging.error("Trap Sprung: Jail log channel not found")
-            return
-        elif isinstance(jail_log_channel, (ForumChannel, CategoryChannel)):
-            logging.error(
-                "Trap Sprung: Jail log channel is a Forum or Category Channel"
-            )
-            return
-        officer_role = utils.get(guild.roles, name=self.bot.config["roles"]["officer"])
+        officer_role = utils.get(guild.roles, name=self.bot.config["roles"]["admin"])
         if officer_role is None:
-            logging.error("Trap Sprung: Officer role not found")
+            logging.error("Trap Sprung: Admin role not found")
             return
 
         # Gather up user data and then jail them.

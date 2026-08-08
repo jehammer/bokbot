@@ -1,7 +1,7 @@
 from discord import Interaction, TextStyle
 from discord.ui import Modal, TextInput
 from bot.errors import (
-    MissingGuildError,
+    AppCommandGuildNotFoundError,
     MissingInteractionError,
     MissingRoleError,
 )
@@ -22,7 +22,7 @@ class CloseModal(Modal):
         if interaction is None:
             raise MissingInteractionError
         if interaction.guild is None:
-            raise MissingGuildError
+            raise AppCommandGuildNotFoundError
 
         self.localization = bot.language[lang]["replies"]
         self.ui_language = bot.language[lang]["ui"]
@@ -68,7 +68,7 @@ class CloseModal(Modal):
         if interaction is None:
             raise MissingInteractionError
         if interaction.guild is None:
-            raise MissingGuildError
+            raise AppCommandGuildNotFoundError
 
         confirm_val = self.confirm.value.strip().lower()
         runs_inc = self.runs.value.strip().lower()

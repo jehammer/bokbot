@@ -2,7 +2,7 @@ import discord
 from discord import Member, FFmpegPCMAudio
 from discord import ForumChannel
 from discord import CategoryChannel
-from discord.ext import commands, tasks
+from discord.ext import commands
 import logging
 import asyncio
 
@@ -57,7 +57,6 @@ class Admin(commands.Cog, name="Admin"):
 
     def __init__(self, bot: BOKBot):
         self.bot = bot
-        self.scheduled_good_morning.start()
 
     @commands.command(name="nobirthday")
     async def remove_users_birthday(self, ctx: commands.Context):
@@ -72,7 +71,7 @@ class Admin(commands.Cog, name="Admin"):
             await ctx.reply(
                 f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
             )
-            logging.error(f"Remove Birthday Error: {str(e)}")
+            logging.exception(f"Remove Birthday Error: {str(e)}")
 
     @commands.command(name="servers", hidden=True)
     @permissions.creator_only()

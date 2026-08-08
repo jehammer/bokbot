@@ -5,6 +5,8 @@ from discord.abc import PrivateChannel
 from discord.ext import commands
 import logging
 import asyncio
+import traceback
+import sys
 
 # My created imports
 from bot import decor as permissions
@@ -15,6 +17,7 @@ from bot.errors import (
     UnknownError,
 )
 from bot.errors import GuildNotFoundError
+from bot.errors.boterrors import AppCommandGuildNotFoundError
 from bot.models import BOKBot
 from bot.services import RosterExtended
 
@@ -34,6 +37,16 @@ class BotSystems(commands.Cog, name="BotSystems"):
             await interaction.response.send_message(f"{str(error)}")
         elif isinstance(error, NotPrivateError):
             await interaction.response.send_message(f"{str(error)}", ephemeral=True)
+        elif isinstance(error, AppCommandGuildNotFoundError):
+            if interaction.command is None or interaction.command.name is None:
+                await interaction.response.send_message(
+                    "Interaction Command Info Missing"
+                )
+                return
+            logging.exception(
+                f"{interaction.command.name} - Guild not found in interaction"
+            )
+            await interaction.response.send_message("Guild Missing from Interaction")
         else:
             await interaction.response.send_message(
                 "Some weird error is being thrown. Not sure what it is"

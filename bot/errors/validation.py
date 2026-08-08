@@ -1,6 +1,7 @@
-from discord import CategoryChannel, ForumChannel
+from discord import CategoryChannel, ForumChannel, TextChannel, VoiceChannel, abc
 from bot.errors import ChannelNotFoundError, GuildNotFoundError, WrongChannelTypeError
 import logging
+from typing import Any, Union
 
 logging.basicConfig(
     level=logging.INFO,
@@ -8,21 +9,22 @@ logging.basicConfig(
     handlers=[logging.FileHandler("log.log", mode="a"), logging.StreamHandler()],
 )  # , datefmt="%Y-%m-%d %H:%M:%S")
 
+SendableChannel = Union[TextChannel, VoiceChannel]
+
 
 class Validators:
     @staticmethod
-    def validate_guild(guild, command_name):
+    def validate_guild(guild):
         if guild is None:
-            logging.error(f"{command_name}: Guild not found")
-            raise GuildNotFoundError(f"{command_name}: Guild not found")
+            raise GuildNotFoundError("Guild not found")
 
     @staticmethod
-    def validate_channel(channel, command_name):
+    def validate_channel(channel: Any) -> abc.Messageable:
         if channel is None:
-            logging.error(f"{command_name}: Channel not found")
-            raise ChannelNotFoundError(f"{command_name}: Channel not found")
+            logging.error("Channel not found")
+            raise ChannelNotFoundError("Channel not found")
+
         elif isinstance(channel, (ForumChannel, CategoryChannel)):
-            logging.error(f"{command_name}:  Channel is a Forum or Category Channel")
-            raise WrongChannelTypeError(
-                f"{command_name}: Channel is a Forum or Category Channel"
-            )
+            logging.error("Channel is a Forum or Category Channel")
+            raise WrongChannelTypeError("Channel is a Forum or Category Channel")
+        return channel

@@ -1,4 +1,5 @@
 from .boterrors import *
+from .validation import *
 
 __all__ = [
     "IODBError",
@@ -11,6 +12,7 @@ __all__ = [
     "BotUserError",
     "NotPrivateError",
     "MissingInteractionError",
-    "MissingGuildError",
+    "AppCommandGuildNotFoundError",
     "MissingRoleError",
+    "Validators",
 ]
