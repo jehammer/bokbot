@@ -252,34 +252,30 @@ class EmbedFactory:
         rosters_removed,
         lang,
     ):
-        try:
-            assert member.joined_at is not None
-            embed = Embed(
-                title=f"{member.name} - {member.display_name}",
-                description=f"Joined:  {calendar.month_name[member.joined_at.month]} {member.joined_at.day}{Utilities.suffix(member.joined_at.day)} {member.joined_at.year}",
-            )
-            embed.set_author(name="TRAITOR ALERT")
-            embed.add_field(
-                name="Active Rosters Removed",
-                value=", ".join(rosters_removed) if rosters_removed else "None",
-                inline=False,
-            )
+        assert member.joined_at is not None
+        embed = Embed(
+            title=f"{member.name} - {member.display_name}",
+            description=f"Joined:  {calendar.month_name[member.joined_at.month]} {member.joined_at.day}{Utilities.suffix(member.joined_at.day)} {member.joined_at.year}",
+        )
+        embed.set_author(name="TRAITOR ALERT")
+        embed.add_field(
+            name="Active Rosters Removed",
+            value=", ".join(rosters_removed) if rosters_removed else "None",
+            inline=False,
+        )
 
-            last_ran_data = (
-                f"{count.lastTrial} on {count.lastDate}\nDPS: {count.dpsRuns} | Tank: {count.tankRuns} | Healer: {count.healerRuns} | Event: {count.eventRuns}"
-                if count and count.lastTrial and count.lastDate
-                else "N/A"
-            )
+        last_ran_data = (
+            f"{count.lastTrial} on {count.lastDate}\nDPS: {count.dpsRuns} | Tank: {count.tankRuns} | Healer: {count.healerRuns} | Event: {count.eventRuns}"
+            if count and count.lastTrial and count.lastDate
+            else "N/A"
+        )
 
-            last_ranking_data = (
-                f"Total: {rank.count}\nLast: {rank.last_called}\nLowest: {rank.lowest}\nHighest: {rank.highest}\nSingles: {rank.singles}\nDoubles: {rank.doubles}\nSamsies: {rank.samsies}\n69s: {rank.six_nine}\n420s: {rank.four_twenty}\nBoobs: {rank.boob}\nPies: {rank.pie}\nPalindromes: {rank.palindrome}"
-                if rank and rank.count > 0
-                else "N/A"
-            )
+        last_ranking_data = (
+            f"Total: {rank.count}\nLast: {rank.last_called}\nLowest: {rank.lowest}\nHighest: {rank.highest}\nSingles: {rank.singles}\nDoubles: {rank.doubles}\nSamsies: {rank.samsies}\n69s: {rank.six_nine}\n420s: {rank.four_twenty}\nBoobs: {rank.boob}\nPies: {rank.pie}\nPalindromes: {rank.palindrome}"
+            if rank and rank.count > 0
+            else "N/A"
+        )
 
-            embed.add_field(name="Last Ran", value=last_ran_data, inline=False)
-            embed.add_field(name="Last Ranking", value=last_ranking_data, inline=False)
-            return embed
-        except Exception as e:
-            logging.exception(f"Member Leave Embed Create Error: {e}")
-            raise e
+        embed.add_field(name="Last Ran", value=last_ran_data, inline=False)
+        embed.add_field(name="Last Ranking", value=last_ranking_data, inline=False)
+        return embed
