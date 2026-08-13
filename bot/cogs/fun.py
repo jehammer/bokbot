@@ -6,6 +6,7 @@ import time
 from discord import User, app_commands, Interaction, Member
 from discord.ext import commands
 
+from bot.errors.boterrors import AppCommandUserNotFoundError
 from bot.modals import BirthdayModal
 from bot.models import Rank, BOKBot
 from bot.services import Utilities, EmbedFactory
@@ -182,38 +183,34 @@ class Fun(commands.Cog, name="Fun"):
     @app_commands.command(name="kowtow", description="Check someones Ranking records")
     @app_commands.describe(member="Discord user to check if not yourself.")
     async def send_rank_info_app_command(
-        self, interaction: Interaction, member: Member = None
+        self, interaction: Interaction, member: Member | None = None
     ) -> None:
         """Prints a leaderboard for your /rank uses"""
-        user_language = Utilities.get_language(interaction.user)
-        try:
-            if member is None:
-                member = interaction.user
-            elif member.bot:
-                await interaction.response.send_message(
-                    f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['NoBots'])}"
-                )
-                return
-            user_id = member.id
-            rank_data: Rank = self.bot.librarian.get_rank(user_id=user_id)
-            if rank_data is None:
-                await interaction.response.send_message(
-                    f"{self.bot.language[user_language]['replies']['Rank']['NoHistory']}"
-                )
-                return
-
-            embed = EmbedFactory.create_ranking(
-                rank=rank_data,
-                lang=self.bot.language[user_language]["ui"]["Rank"],
-                name=member.display_name,
-            )
-            await interaction.response.send_message(embed=embed)
-
-        except Exception as e:
+        if interaction.user is None or isinstance(interaction.user, User):
+            raise AppCommandUserNotFoundError()
+        caller = interaction.user
+        user_language = Utilities.get_language(caller)
+        if member is None:
+            member = caller
+        elif member.bot:
             await interaction.response.send_message(
-                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
+                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['NoBots'])}"
             )
-            logging.error(f"Kowtow Error: {str(e)}")
+            return
+        user_id = member.id
+        rank_data: Rank | None = self.bot.librarian.get_rank(user_id=user_id)
+        if rank_data is None:
+            await interaction.response.send_message(
+                f"{self.bot.language[user_language]['replies']['Rank']['NoHistory']}"
+            )
+            return
+
+        embed = EmbedFactory.create_ranking(
+            rank=rank_data,
+            lang=self.bot.language[user_language]["ui"]["Rank"],
+            name=member.display_name,
+        )
+        await interaction.response.send_message(embed=embed)
 
     @commands.command(name="8ball")
     async def magic_eight_ball(self, ctx: commands.context):
@@ -272,7 +269,7 @@ class Fun(commands.Cog, name="Fun"):
         await ctx.reply(response)
 
     @commands.command()
-    async def goodnight(self, ctx: commands.context):
+    async def goodnight(self, ctx: commands.Context):
         """A way to say goodnight to bok"""
 
         # Wow, this looks ugly, ah well. Say goodnight to the guildies
@@ -312,117 +309,61 @@ Goodnight BOK
         await ctx.send(message)
 
     @commands.command(name="otter")
-    async def otter(self, ctx: commands.context):
+    async def otter(self, ctx: commands.Context):
         """An Otterful Greeting!"""
-        user_language = Utilities.get_language(ctx.author)
-        try:
-            await ctx.send(
-                "https://cdn.discordapp.com/attachments/911730032286785536/1443359030868447232/otterful.gif "
-            )
-        except Exception as e:
-            await ctx.send(
-                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
-            )
-            logging.error(f"Otter Error: {str(e)}")
+        await ctx.send(
+            "https://cdn.discordapp.com/attachments/911730032286785536/1443359030868447232/otterful.gif "
+        )
 
     @commands.command(name="oops")
     async def armas_oops(self, ctx: commands.Context):
         """Self-explanatory"""
-        user_language = Utilities.get_language(ctx.author)
-        try:
-            await ctx.send(
-                "https://cdn.discordapp.com/attachments/911730032286785536/1443375553167228989/Oops.png"
-            )
-        except Exception as e:
-            await ctx.send(
-                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
-            )
-            logging.error(f"Oops error: {str(e)}")
+        await ctx.send(
+            "https://cdn.discordapp.com/attachments/911730032286785536/1443375553167228989/Oops.png"
+        )
 
     @commands.command(name="uwu")
     async def lily_uwu(self, ctx: commands.Context):
         """Basically an anime girl"""
-        user_language = Utilities.get_language(ctx.author)
-        try:
-            await ctx.send(
-                "https://media.discordapp.net/attachments/911730032286785536/1464875517672161474/Lily.png"
-            )
-        except Exception as e:
-            await ctx.send(
-                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
-            )
-            logging.error(f"Lily error: {str(e)}")
+        await ctx.send(
+            "https://media.discordapp.net/attachments/911730032286785536/1464875517672161474/Lily.png"
+        )
 
     @app_commands.command(name="birthday", description="Set your birthday for BOKBot")
     async def set_birthday_app_command(self, interaction: Interaction) -> None:
         """Loads modal to set user birthday"""
         user_language = Utilities.get_language(interaction.user)
-        try:
-            await interaction.response.send_modal(
-                BirthdayModal(
-                    interaction=interaction, bot=self.bot, user_lang=user_language
-                )
+        await interaction.response.send_modal(
+            BirthdayModal(
+                interaction=interaction, bot=self.bot, user_lang=user_language
             )
-
-        except Exception as e:
-            await interaction.response.send_message(
-                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
-            )
-            logging.error(f"Birthday Error: {str(e)}")
+        )
 
     @commands.command(name="quickie")
     async def just_a_quick_run(self, ctx: commands.Context):
         """For Octavia"""
-        user_language = (
-            Utilities.get_language(ctx.author)
-            if isinstance(ctx.author, Member)
-            else "english"
+        await ctx.send(
+            "https://cdn.discordapp.com/attachments/911730032286785536/1492409390052151436/quickie.png"
         )
-        try:
-            await ctx.send(
-                "https://cdn.discordapp.com/attachments/911730032286785536/1492409390052151436/quickie.png"
-            )
-        except Exception as e:
-            await ctx.send(
-                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
-            )
-            logging.error(f"Quickie error: {str(e)}")
 
     @commands.command(name="spam")
     async def bit_of_spam(self, ctx: commands.Context):
         """It is delicious"""
-        user_language = (
-            Utilities.get_language(ctx.author)
-            if isinstance(ctx.author, Member)
-            else "english"
+        await ctx.send(
+            "https://cdn.discordapp.com/attachments/911730032286785536/1493310804152422452/spam.jpg"
         )
-        try:
-            await ctx.send(
-                "https://cdn.discordapp.com/attachments/911730032286785536/1493310804152422452/spam.jpg"
-            )
-        except Exception as e:
-            await ctx.send(
-                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
-            )
-            logging.error(f"Spam error: {str(e)}")
 
     @commands.command(name="armauwu")
     async def armasuwu(self, ctx: commands.Context):
         """Why is everyone saying it suddenly?"""
-        user_language = (
-            Utilities.get_language(ctx.author)
-            if isinstance(ctx.author, Member)
-            else "english"
+        await ctx.send(
+            "https://cdn.discordapp.com/attachments/911730032286785536/1512463759506149526/image-1.png"
         )
-        try:
-            await ctx.send(
-                "https://cdn.discordapp.com/attachments/911730032286785536/1512463759506149526/image-1.png"
-            )
-        except Exception as e:
-            await ctx.send(
-                f"{Utilities.format_error(user_language, self.bot.language[user_language]['replies']['Unknown'])}"
-            )
-            logging.exception(f"Armasuwu error: {str(e)}")
+
+    @commands.command(name="twerkingbahsei", aliases=["ddr", "bahsei"])
+    async def bahsei_video(self, ctx: commands.Context):
+        """Too many curses"""
+        await ctx.send("https://www.youtube.com/watch?v=PmvAmDUE_cE")
 
 
 async def setup(bot: BOKBot):

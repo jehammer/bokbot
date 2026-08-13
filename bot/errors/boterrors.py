@@ -90,7 +90,7 @@ class CommandGuildNotFoundError(commands.CommandError):
     pass
 
 
-class AppCommandGuildNotFoundError(app_commands.AppCommandError):
+class AppCommandUserNotFoundError(app_commands.AppCommandError):
     pass
 
 
